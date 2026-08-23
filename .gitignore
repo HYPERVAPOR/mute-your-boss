@@ -1,0 +1,34 @@
+# Rust
+/target
+**/*.rs.bk
+Cargo.lock
+
+# Go
+*.exe
+*.dll
+*.so
+*.dylib
+/vendor
+
+# Node / Tauri (future)
+node_modules/
+dist/
+build/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local tooling binaries
+tools/
+
+# Build outputs
+gateway/bin/
+

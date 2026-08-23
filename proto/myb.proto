@@ -1,0 +1,116 @@
+syntax = "proto3";
+
+package myb.v1;
+
+option go_package = "github.com/HYPERVAPOR/mute-your-boss/gateway/internal/pb";
+
+// ---------------------------------------------------------------------------
+// Common
+// ---------------------------------------------------------------------------
+
+message Empty {}
+
+// ---------------------------------------------------------------------------
+// Audio process
+// ---------------------------------------------------------------------------
+
+message AudioProcess {
+  uint32 pid = 1;
+  string name = 2;
+  string window_title = 3;
+  float current_volume = 4; // 0.0 ~ 1.0
+  bool is_meeting_app = 5;
+}
+
+message ProcessList {
+  repeated AudioProcess processes = 1;
+}
+
+// ---------------------------------------------------------------------------
+// Policy
+// ---------------------------------------------------------------------------
+
+message KeywordMatch {
+  repeated string keywords = 1;
+  double threshold = 2; // 0.0 ~ 1.0
+}
+
+message PolicyAction {
+  uint32 volume = 1;           // 0 ~ 100
+  uint32 duration_seconds = 2; // keep volume for N seconds after last hit
+  string then = 3;             // "auto" | "mute"
+}
+
+message Policy {
+  string name = 1;
+  KeywordMatch match = 2;
+  PolicyAction action = 3;
+}
+
+message PolicyYaml {
+  string yaml = 1;
+}
+
+message ValidationResult {
+  bool ok = 1;
+  string error = 2;
+}
+
+// ---------------------------------------------------------------------------
+// Session
+// ---------------------------------------------------------------------------
+
+message StartSessionReq {
+  uint32 pid = 1;
+  repeated Policy policies = 2;
+}
+
+message SessionRef {
+  string session_id = 1;
+}
+
+message Session {
+  string session_id = 1;
+  uint32 pid = 2;
+  string state = 3; // "idle" | "listening" | "triggered" | "paused"
+}
+
+message SetVolumeReq {
+  uint32 pid = 1;
+  uint32 volume = 2; // 0 ~ 100
+}
+
+// ---------------------------------------------------------------------------
+// Events and status
+// ---------------------------------------------------------------------------
+
+message Event {
+  int64 timestamp_ms = 1;
+  string session_id = 2;
+  string policy_name = 3;
+  string keyword = 4;
+  double confidence = 5;
+  string current_state = 6;
+}
+
+message SessionStatus {
+  string session_id = 1;
+  string state = 2;
+  uint32 current_volume = 3;
+  uint32 target_pid = 4;
+  uint32 latency_ms = 5;
+}
+
+// ---------------------------------------------------------------------------
+// Service
+// ---------------------------------------------------------------------------
+
+service MuteYourBoss {
+  rpc ListAudioProcesses(Empty) returns (ProcessList);
+  rpc StartSession(StartSessionReq) returns (Session);
+  rpc StopSession(SessionRef) returns (Empty);
+  rpc SetVolume(SetVolumeReq) returns (Empty);
+  rpc GetEventStream(SessionRef) returns (stream Event);
+  rpc GetStatus(SessionRef) returns (SessionStatus);
+  rpc ValidatePolicy(PolicyYaml) returns (ValidationResult);
+}
