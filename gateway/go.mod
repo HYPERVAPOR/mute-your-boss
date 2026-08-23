@@ -2,6 +2,8 @@ module github.com/HYPERVAPOR/mute-your-boss/gateway
 
 go 1.23
 
+toolchain go1.26.1
+
 require (
 	google.golang.org/grpc v1.65.0
 	google.golang.org/protobuf v1.34.2
