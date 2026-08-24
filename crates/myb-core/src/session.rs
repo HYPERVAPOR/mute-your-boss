@@ -65,7 +65,9 @@ impl FocusSession {
 
         let hits = self.kws.process_chunk(&chunk.samples, chunk.timestamp_ms)?;
         for hit in hits {
-            let decision = self.policy.evaluate(&hit.keyword, hit.confidence);
+            let decision = self
+                .policy
+                .evaluate(&hit.keyword, hit.confidence, hit.timestamp_ms);
             match decision {
                 VolumeDecision::SetVolume {
                     volume,
@@ -82,8 +84,12 @@ impl FocusSession {
                     });
                     let _ = duration_seconds; // TODO: schedule reset
                 }
+                VolumeDecision::Renew => {
+                    // TODO: extend the active volume duration without changing
+                    // the volume level.
+                }
                 VolumeDecision::Default => {
-                    // TODO: apply default action (usually mute)
+                    // TODO: apply default action (usually mute).
                 }
             }
         }

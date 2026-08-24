@@ -10,3 +10,4 @@ repository.workspace = true
 myb-core = { path = "../myb-core" }
 anyhow = "1"
 serde = { version = "1", features = ["derive"] }
+serde_yaml = "0.9"

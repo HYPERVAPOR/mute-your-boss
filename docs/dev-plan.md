@@ -95,9 +95,9 @@ Implement a minimum usable prototype on Windows: select a Tencent Meeting / Feis
 
 | ID | Task | Dependencies | Acceptance Criteria | Status |
 |----|------|--------------|---------------------|--------|
-| M1.5.1 | Implement YAML policy parsing and validation in `myb-policy` | M1.1.4 | Invalid policies return clear errors; covered by unit tests | [ ] |
-| M1.5.2 | Implement `PolicyEngine` trait in `myb-policy`: list-order matching, threshold judgment, action execution | M1.5.1 | After keyword hit, return correct `VolumeDecision` | [ ] |
-| M1.5.3 | Implement debounce and renewal in `myb-policy`: repeated hits within the same policy debounce window refresh duration | M1.5.2 | Unit tests cover multiple hits within a 5s window | [ ] |
+| M1.5.1 | Implement YAML policy parsing and validation in `myb-policy` | M1.1.4 | Invalid policies return clear errors; covered by unit tests | [x] |
+| M1.5.2 | Implement `PolicyEngine` trait in `myb-policy`: list-order matching, threshold judgment, action execution | M1.5.1 | After keyword hit, return correct `VolumeDecision` | [x] |
+| M1.5.3 | Implement debounce and renewal in `myb-policy`: repeated hits within the same policy debounce window refresh duration | M1.5.2 | Unit tests cover multiple hits within a 5s window | [x] |
 
 #### M1.6 Event Log (myb-event-log)
 
