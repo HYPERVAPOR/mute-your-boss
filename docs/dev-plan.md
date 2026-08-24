@@ -61,11 +61,11 @@ Implement a minimum usable prototype on Windows: select a Tencent Meeting / Feis
 
 | ID | Task | Dependencies | Acceptance Criteria | Status |
 |----|------|--------------|---------------------|--------|
-| M1.1.1 | Initialize monorepo: create `/gateway` (Go), `/crates/myb-core`, `/crates/myb-audio-capture`, `/crates/myb-volume-control`, `/crates/myb-kws`, `/crates/myb-policy`, `/crates/myb-event-log`, `/crates/myb-server`, `/proto` | None | All crates and gateway can be compiled independently; root `Makefile` provides `build`, `test`, `fmt` | [ ] |
-| M1.1.2 | Define proto file: `MuteYourBoss` service, Process / Session / Event messages | None | `buf generate` can produce Go and Rust code; CI checks proto changes | [ ] |
-| M1.1.3 | Set up `myb-server`: `tokio` + `tonic` gRPC server, logging and config loading | M1.1.2 | `cargo run -p myb-server` starts and listens on localhost gRPC | [ ] |
-| M1.1.4 | Define all traits in `myb-core`: `AudioCapture`, `VolumeController`, `KwsEngine`, `PolicyEngine`, `EventLog` | M1.1.1 | Traits are platform-agnostic; include mock-friendly abstractions | [ ] |
-| M1.1.5 | Initialize stub crates `myb-audio-capture`, `myb-volume-control`, `myb-kws`, `myb-policy`, `myb-event-log` | M1.1.1, M1.1.4 | All compile and depend on `myb-core` traits; provide mock implementations for unit tests | [ ] |
+| M1.1.1 | Initialize monorepo: create `/gateway` (Go), `/crates/myb-core`, `/crates/myb-audio-capture`, `/crates/myb-volume-control`, `/crates/myb-kws`, `/crates/myb-policy`, `/crates/myb-event-log`, `/crates/myb-server`, `/proto` | None | All crates and gateway can be compiled independently; root `Makefile` provides `build`, `test`, `fmt` | [x] |
+| M1.1.2 | Define proto file: `MuteYourBoss` service, Process / Session / Event messages | None | `buf generate` can produce Go and Rust code; CI checks proto changes | [x] |
+| M1.1.3 | Set up `myb-server`: `tokio` + `tonic` gRPC server, logging and config loading | M1.1.2 | `cargo run -p myb-server` starts and listens on localhost gRPC | [x] |
+| M1.1.4 | Define all traits in `myb-core`: `AudioCapture`, `VolumeController`, `KwsEngine`, `PolicyEngine`, `EventLog` | M1.1.1 | Traits are platform-agnostic; include mock-friendly abstractions | [x] |
+| M1.1.5 | Initialize stub crates `myb-audio-capture`, `myb-volume-control`, `myb-kws`, `myb-policy`, `myb-event-log` | M1.1.1, M1.1.4 | All compile and depend on `myb-core` traits; provide mock implementations for unit tests | [x] |
 
 #### M1.2 Audio Capture (Windows)
 
