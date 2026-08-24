@@ -103,17 +103,17 @@ Implement a minimum usable prototype on Windows: select a Tencent Meeting / Feis
 
 | ID | Task | Dependencies | Acceptance Criteria | Status |
 |----|------|--------------|---------------------|--------|
-| M1.6.1 | Implement `EventLog` trait in `myb-event-log` | M1.1.4 | Append / recent / clear operations work; persists to JSONL or SQLite | [ ] |
+| M1.6.1 | Implement `EventLog` trait in `myb-event-log` | M1.1.4 | Append / recent / clear operations work; persists to JSONL or SQLite | [x] |
 | M1.6.2 | Add query API and one-click clear endpoint | M1.6.1 | gRPC `GetEventStream` / status can read from event log | [ ] |
 
 #### M1.7 Core Orchestration (myb-core)
 
 | ID | Task | Dependencies | Acceptance Criteria | Status |
 |----|------|--------------|---------------------|--------|
-| M1.7.1 | Implement `FocusSession`: wire `AudioCapture` → `KwsEngine` → `PolicyEngine` → `VolumeController` + `EventLog` | M1.1.4, M1.4.3, M1.5.2, M1.6.1 | A keyword hit from a mock stream changes the mock volume | [ ] |
+| M1.7.1 | Implement `FocusSession`: wire `AudioCapture` → `KwsEngine` → `PolicyEngine` → `VolumeController` + `EventLog` | M1.1.4, M1.4.3, M1.5.2, M1.6.1 | A keyword hit from a mock stream changes the mock volume | [x] |
 | M1.7.2 | Implement volume restore guardian in `myb-core` | M1.3.1, M1.7.1 | Target process volume is restored after manually killing the server | [ ] |
-| M1.7.3 | Implement fail-safe: restore volume on KWS / policy / audio capture anomaly | M1.7.2 | Simulate any subsystem crash, volume returns to safe level | [ ] |
-| M1.7.4 | Handle user manually changing volume: detect external changes and pause automatic control | M1.3.1 | State becomes paused after manual change; user decides whether to resume control | [ ] |
+| M1.7.3 | Implement fail-safe: restore volume on KWS / policy / audio capture anomaly | M1.7.2 | Simulate any subsystem crash, volume returns to safe level | [x] |
+| M1.7.4 | Handle user manually changing volume: detect external changes and pause automatic control | M1.3.1 | State becomes paused after manual change; user decides whether to resume control | [x] |
 
 #### M1.8 API Gateway (Go)
 

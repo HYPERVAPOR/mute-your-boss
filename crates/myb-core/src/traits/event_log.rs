@@ -18,8 +18,21 @@ pub trait EventLog: Send + Sync {
     /// Return the most recent `limit` events in chronological order.
     fn recent(&self, limit: usize) -> Vec<TriggerEvent>;
 
+    /// Query events filtered by session_id and/or start time.
+    ///
+    /// Results are returned in chronological order, capped at `limit`.
+    fn query(
+        &self,
+        session_id: Option<&str>,
+        since_ms: Option<i64>,
+        limit: usize,
+    ) -> Vec<TriggerEvent>;
+
     /// Clear all stored events.
     fn clear(&mut self);
+
+    /// Return the total number of stored events.
+    fn count(&self) -> usize;
 }
 
 impl fmt::Debug for dyn EventLog + Send + Sync {

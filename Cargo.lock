@@ -779,6 +779,7 @@ dependencies = [
  "serde",
  "tonic",
  "tonic-build",
+ "tracing",
 ]
 
 [[package]]
@@ -789,6 +790,9 @@ dependencies = [
  "chrono",
  "myb-core",
  "serde",
+ "serde_json",
+ "tempfile",
+ "tracing",
 ]
 
 [[package]]
