@@ -8,8 +8,7 @@ repository.workspace = true
 
 [dependencies]
 myb-core = { path = "../myb-core" }
+myb-policy = { path = "../myb-policy" }
 anyhow = "1"
 tracing = "0.1"
-
-# To be added in M1.4.1:
-# sherpa-onnx = "*"
+sherpa-onnx = "1.13.6"

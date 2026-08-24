@@ -96,7 +96,7 @@ async fn main() -> anyhow::Result<()> {
         .init();
 
     let addr: SocketAddr = "127.0.0.1:50051".parse()?;
-    let service = MybServerService::default();
+    let service = MybServerService;
 
     tracing::info!("myb-server listening on {}", addr);
 

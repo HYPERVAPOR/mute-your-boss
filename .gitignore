@@ -31,3 +31,7 @@ tools/
 # Build outputs
 gateway/bin/
 
+# Downloaded ML models (large binaries)
+/models
+
+

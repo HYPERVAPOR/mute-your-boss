@@ -86,9 +86,9 @@ Implement a minimum usable prototype on Windows: select a Tencent Meeting / Feis
 
 | ID | Task | Dependencies | Acceptance Criteria | Status |
 |----|------|--------------|---------------------|--------|
-| M1.4.1 | Integrate sherpa-onnx Rust crate in `myb-kws`; load KWS model and self-check | None | `cargo build` passes; readable error if model is missing on startup | [ ] |
-| M1.4.2 | Implement keyword vocabulary construction in `myb-kws`: extract keywords from YAML policies and generate sherpa-onnx vocabulary | M1.4.1 | Supports Chinese (pinyin with tones) + English mixed configuration | [ ] |
-| M1.4.3 | Implement `KwsEngine` trait in `myb-kws`: consume any `AudioCapture` stream, output `{keyword, confidence, timestamp}` | M1.4.2, M1.1.4 | Can stably detect keywords from a mock audio stream in unit tests | [ ] |
+| M1.4.1 | Integrate sherpa-onnx Rust crate in `myb-kws`; load KWS model and self-check | None | `cargo build` passes; readable error if model is missing on startup | [x] |
+| M1.4.2 | Implement keyword vocabulary construction in `myb-kws`: extract keywords from YAML policies and generate sherpa-onnx vocabulary | M1.4.1 | Supports Chinese (pinyin with tones) + English mixed configuration | [x] |
+| M1.4.3 | Implement `KwsEngine` trait in `myb-kws`: consume any `AudioCapture` stream, output `{keyword, confidence, timestamp}` | M1.4.2, M1.1.4 | Can stably detect keywords from a mock audio stream in unit tests | [x] |
 | M1.4.4 | Keyword latency and detection rate test: quiet environment Mandarin, ≥ 95% detection, ≤ 1s latency | M1.4.3, M1.2.2 | Produce test report; record threshold tuning recommendations | [ ] |
 
 #### M1.5 Policy Engine (myb-policy)

@@ -1,21 +1,24 @@
+pub mod engine;
+pub mod vocab;
+
+pub use engine::{KwsConfig, KwsModelPaths, SherpaKwsEngine};
+pub use vocab::{KeywordEntry, KeywordVocab};
+
 use myb_core::{AudioStream, KwsEngine as KwsEngineTrait, KwsHit};
 
-/// Keyword spotting engine stub.
-///
-/// In M1.4 this will load a sherpa-onnx model and perform streaming detection.
-/// For now it returns no hits so the pipeline can be wired up.
+/// A no-op keyword spotting engine for early pipeline wiring and tests.
 #[derive(Debug, Default)]
-pub struct KwsEngine {
+pub struct StubKwsEngine {
     _placeholder: (),
 }
 
-impl KwsEngine {
+impl StubKwsEngine {
     pub fn new() -> Self {
         Self::default()
     }
 }
 
-impl KwsEngineTrait for KwsEngine {
+impl KwsEngineTrait for StubKwsEngine {
     fn process_chunk(
         &mut self,
         _samples: &[f32],
