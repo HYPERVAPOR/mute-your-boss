@@ -1,4 +1,4 @@
-use myb_core::{PolicyEngine as PolicyEngineTrait, VolumeDecision};
+use myb_core::{KeywordEntry, PolicyEngine as PolicyEngineTrait, VolumeDecision};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
@@ -148,14 +148,6 @@ impl PolicyEngine {
     }
 }
 
-/// Extract the display label from a keyword spec.
-///
-/// A spec may be either `DISPLAY=PHONEMES` (used to build the KWS vocabulary)
-/// or just `DISPLAY`.  This function returns the `DISPLAY` part.
-pub fn keyword_display(spec: &str) -> &str {
-    spec.split_once('=').map(|(d, _)| d).unwrap_or(spec).trim()
-}
-
 impl PolicyEngineTrait for PolicyEngine {
     fn evaluate(&mut self, keyword: &str, confidence: f64, timestamp_ms: i64) -> VolumeDecision {
         for policy in &self.policies {
@@ -163,7 +155,7 @@ impl PolicyEngineTrait for PolicyEngine {
                 .match_
                 .keywords
                 .iter()
-                .any(|k| keyword_display(k) == keyword);
+                .any(|k| KeywordEntry::display_of(k) == keyword);
             if !matched || confidence < policy.match_.threshold {
                 continue;
             }

@@ -6,6 +6,6 @@ pub mod volume;
 
 pub use audio::{AudioCapture, AudioChunk, AudioProcessInfo, AudioStream};
 pub use event_log::{EventLog, TriggerEvent};
-pub use kws::{KwsEngine, KwsHit};
+pub use kws::{KeywordEntry, KeywordVocab, KwsEngine, KwsHit};
 pub use policy::{PolicyEngine, VolumeDecision};
 pub use volume::VolumeController;

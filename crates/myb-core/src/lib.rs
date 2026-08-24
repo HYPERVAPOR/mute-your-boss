@@ -7,6 +7,6 @@ pub mod traits;
 
 pub use session::{FocusSession, SessionState};
 pub use traits::{
-    AudioCapture, AudioChunk, AudioProcessInfo, AudioStream, EventLog, KwsEngine, KwsHit,
-    PolicyEngine, TriggerEvent, VolumeController, VolumeDecision,
+    AudioCapture, AudioChunk, AudioProcessInfo, AudioStream, EventLog, KeywordEntry, KeywordVocab,
+    KwsEngine, KwsHit, PolicyEngine, TriggerEvent, VolumeController, VolumeDecision,
 };

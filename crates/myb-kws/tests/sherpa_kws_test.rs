@@ -1,22 +1,10 @@
-use myb_core::KwsEngine;
-use myb_kws::{KeywordVocab, KwsConfig, SherpaKwsEngine};
+use myb_core::{KeywordVocab, KwsEngine};
+use myb_kws::{KeywordVocabExt, KwsConfig, SherpaKwsEngine};
 use sherpa_onnx::Wave;
 use std::path::PathBuf;
 
-fn build_vocab_from_policy() -> KeywordVocab {
-    let policy = myb_policy::Policy {
-        name: "unmute".into(),
-        match_: myb_policy::KeywordMatch {
-            keywords: vec!["LIGHT_UP=L AY1 T AH1 P".into()],
-            threshold: 0.25,
-        },
-        action: myb_policy::PolicyAction {
-            volume: 100,
-            duration_seconds: 5,
-            then: "mute".into(),
-        },
-    };
-    KeywordVocab::from_policies(&[policy]).expect("build vocab")
+fn build_vocab_from_specs() -> KeywordVocab {
+    KeywordVocab::from_specs(["LIGHT_UP=L AY1 T AH1 P"]).expect("build vocab")
 }
 
 fn model_dir() -> PathBuf {
@@ -87,7 +75,7 @@ fn detects_keyword_from_policy_generated_vocab() {
         return;
     }
 
-    let vocab = build_vocab_from_policy();
+    let vocab = build_vocab_from_specs();
     let keywords_file = dir.join("test_wavs/policy_keywords.txt");
     vocab.write_to_file(&keywords_file).expect("write vocab");
 

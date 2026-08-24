@@ -2,7 +2,7 @@ pub mod engine;
 pub mod vocab;
 
 pub use engine::{KwsConfig, KwsModelPaths, SherpaKwsEngine};
-pub use vocab::{KeywordEntry, KeywordVocab};
+pub use vocab::KeywordVocabExt;
 
 use myb_core::{AudioStream, KwsEngine as KwsEngineTrait, KwsHit};
 
