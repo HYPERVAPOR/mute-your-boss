@@ -22,51 +22,11 @@ The goal is to support common meeting apps on Windows, macOS, and Linux:
 
 Platform-specific adapters are still being implemented. The current release focuses on the core pipeline and Windows support.
 
-## How to Use
+## Usage
 
-### 1. Download a Keyword Model
+🚧 **Pending — under active development.**
 
-Download the Chinese-English keyword spotting model and extract it under `models/`:
-
-```bash
-mkdir -p models
-curl -L -o models/kws.tar.bz2 \
-  https://github.com/k2-fsa/sherpa-onnx/releases/download/kws-models/sherpa-onnx-kws-zipformer-zh-en-3M-2025-12-20.tar.bz2
-tar -xjf models/kws.tar.bz2 -C models
-rm models/kws.tar.bz2
-```
-
-### 2. Configure Keywords
-
-Create a `policies.yaml` file:
-
-```yaml
-policies:
-  - name: roll-call
-    match:
-      keywords:
-        - "YOUR_NAME=y ou r n ey m"   # English: ARPAbet phonemes
-        - "我要发言=w ǒ y ào f ā yán"  # Chinese: pinyin with tones
-      threshold: 0.6
-    action:
-      volume: 100
-      duration_seconds: 30
-      then: mute
-```
-
-> **Note:** Keywords must be written as phonemes (English) or pinyin with tones (Chinese) so the model can recognize them. A pinyin auto-conversion helper is planned.
->
-> **Note on control flow:** The app restores volume when a keyword is detected and keeps it up for the configured duration. You remain in control: changing the volume yourself pauses automatic handling, and the panic shortcut immediately restores normal volume.
-
-### 3. Start the Server
-
-```bash
-make run-server
-```
-
-### 4. Open the GUI and Start a Session
-
-Select the meeting process, load your `policies.yaml`, and click start. The app listens only to that process and adjusts its volume independently of your system volume.
+The core pipeline and platform-independent logic are in place, but the Tauri GUI, platform-specific audio adapters, and end-user packaging are still being built. A step-by-step usage guide will be added once the first usable release is ready.
 
 ## Important Notes
 
@@ -74,7 +34,6 @@ Select the meeting process, load your `policies.yaml`, and click start. The app 
 - **Manual override.** If you change the target app's volume yourself while a session is active, automatic control pauses so the tool does not fight you.
 - **Panic shortcut.** Press `Ctrl+Alt+M` (configurable) at any time to immediately restore volume and pause policies.
 - **Model not included.** The keyword model is downloaded separately and ignored by Git.
-- **Work in progress.** Platform adapters and the Tauri GUI are still under active development.
 
 ## License
 
