@@ -41,7 +41,7 @@ Deliver Mute-your-boss in three phases using the technology stack defined in `TS
 | Phase | Core Deliverable | Acceptance Criteria |
 |-------|------------------|---------------------|
 | M1 | Windows core runnable prototype | Tencent Meeting / Feishu end-to-end trigger ≤ 1s; volume restored after crash |
-| M2 | Cross-platform Core Service + Go Gateway | Consistent API behavior across platforms; policy engine unit tests; macOS / Linux adapters complete |
+| M2 | Cross-platform platform crates + Core Service + Go Gateway | Consistent API behavior across platforms; policy engine unit tests; macOS / Linux adapters complete |
 | M3 | Tauri GUI + installers for all three platforms | US-1 ~ US-7 all accepted; 8-hour stability test passed |
 
 ---
@@ -58,25 +58,27 @@ Implement a minimum usable prototype on Windows: select a Tencent Meeting / Feis
 
 | ID | Task | Dependencies | Acceptance Criteria |
 |----|------|--------------|---------------------|
-| M1.1.1 | Initialize monorepo: create `/gateway` (Go), `/core` (Rust), `/proto` directories | None | The three directories can be compiled independently; root `Makefile` provides `build`, `test`, `fmt` |
+| M1.1.1 | Initialize monorepo: create `/gateway` (Go), `/crates/core`, `/crates/audio-capture`, `/crates/volume-control`, `/proto` | None | All crates and gateway can be compiled independently; root `Makefile` provides `build`, `test`, `fmt` |
 | M1.1.2 | Define proto file: `MuteYourBoss` service, Process / Session / Event messages | None | `buf generate` can produce Go and Rust code; CI checks proto changes |
 | M1.1.3 | Set up Rust Core Service project: `tokio` + `tonic` server, logging and config loading | M1.1.2 | `cargo run` starts and listens on localhost gRPC; can read YAML config |
+| M1.1.4 | Define `AudioCapture` and `VolumeController` traits in `crates/core` | M1.1.1 | Traits are platform-agnostic; include process enumeration and 16kHz / mono / f32 PCM audio stream abstraction |
+| M1.1.5 | Initialize `crates/audio-capture` and `crates/volume-control` stub crates | M1.1.1, M1.1.4 | Both compile and depend on core traits; provide mock implementations for unit tests |
 
 #### M1.2 Audio Capture (Windows)
 
 | ID | Task | Dependencies | Acceptance Criteria |
 |----|------|--------------|---------------------|
 | M1.2.1 | Research WASAPI process loopback capture API in `windows-rs` | None | Produce a minimal compilable example; confirm Win10 / Win11 differences |
-| M1.2.2 | Implement `AudioCapture` trait and Windows WASAPI implementation | M1.2.1 | Can capture process audio by PID and output 16kHz / mono / f32 PCM |
-| M1.2.3 | Implement process enumeration: list currently audio-outputting processes (PID, process name, session volume) | M1.2.2 | Unit tests cover common process filtering logic |
+| M1.2.2 | Implement `AudioCapture` trait for Windows in `crates/audio-capture` | M1.1.4, M1.2.1 | Can capture process audio by PID and output 16kHz / mono / f32 PCM |
+| M1.2.3 | Implement process enumeration in `crates/audio-capture` | M1.2.2 | Unit tests cover common process filtering logic |
 | M1.2.4 | Field verification with Tencent Meeting and Feishu: confirm per-process capture feasibility | M1.2.2 | Produce compatibility report; if it fails, record fallback plan |
 
 #### M1.3 Volume Control (Windows)
 
 | ID | Task | Dependencies | Acceptance Criteria |
 |----|------|--------------|---------------------|
-| M1.3.1 | Implement `VolumeController` trait and Windows `ISimpleAudioVolume` implementation | None | Can set volume 0–100 by PID; supports ~200ms fade in / fade out |
-| M1.3.2 | Implement volume restore guardian: snapshot original volume when Core starts, restore on crash / exit | M1.3.1 | Target process volume is restored after manually killing the process |
+| M1.3.1 | Implement `VolumeController` trait for Windows in `crates/volume-control` | M1.1.4 | Can set volume 0–100 by PID; supports ~200ms fade in / fade out |
+| M1.3.2 | Implement volume restore guardian in Core | M1.3.1 | Target process volume is restored after manually killing the process |
 | M1.3.3 | Handle user manually changing volume: detect external changes and pause automatic control | M1.3.1 | State becomes paused after manual change; user decides whether to resume control |
 
 #### M1.4 KWS Integration
@@ -85,8 +87,8 @@ Implement a minimum usable prototype on Windows: select a Tencent Meeting / Feis
 |----|------|--------------|---------------------|
 | M1.4.1 | Integrate sherpa-onnx Rust crate; load KWS model and self-check | None | `cargo build` passes; readable error if model is missing on startup |
 | M1.4.2 | Implement keyword vocabulary construction: extract keywords from YAML policies and generate sherpa-onnx vocabulary | M1.4.1 | Supports Chinese (pinyin with tones) + English mixed configuration |
-| M1.4.3 | Implement streaming KWS: feed audio from ring buffer, output `{keyword, confidence, timestamp}` | M1.4.2, M1.2.2 | Can stably detect keywords from pre-recorded test audio |
-| M1.4.4 | Keyword latency and detection rate test: quiet environment Mandarin, ≥ 95% detection, ≤ 1s latency | M1.4.3 | Produce test report; record threshold tuning recommendations |
+| M1.4.3 | Implement streaming KWS in Core: consume any `AudioCapture` stream, output `{keyword, confidence, timestamp}` | M1.4.2, M1.1.4 | Can stably detect keywords from a mock audio stream in unit tests |
+| M1.4.4 | Keyword latency and detection rate test: quiet environment Mandarin, ≥ 95% detection, ≤ 1s latency | M1.4.3, M1.2.2 | Produce test report; record threshold tuning recommendations |
 
 #### M1.5 Policy Engine
 
@@ -125,7 +127,7 @@ Implement a minimum usable prototype on Windows: select a Tencent Meeting / Feis
 
 ### 4.1 Goal
 
-Complete macOS / Linux adapters for Core Service; ensure consistent unified API behavior across all three platforms; policy engine covered by unit tests; provide installation / startup scripts.
+Complete macOS / Linux adapters in `crates/audio-capture` and `crates/volume-control`; ensure consistent unified API behavior across all three platforms; policy engine covered by unit tests; provide installation / startup scripts.
 
 ### 4.2 Task List
 
@@ -133,8 +135,8 @@ Complete macOS / Linux adapters for Core Service; ensure consistent unified API 
 
 | ID | Task | Dependencies | Acceptance Criteria |
 |----|------|--------------|---------------------|
-| M2.1.1 | Implement macOS Audio Process Tap audio capture | M1.2.2 | Can capture target process audio on macOS 14.2+ |
-| M2.1.2 | Implement macOS CoreAudio HAL volume control | M1.3.1 | Can adjust process volume with fade in / fade out |
+| M2.1.1 | Implement macOS Audio Process Tap audio capture in `crates/audio-capture` | M1.2.2 | Can capture target process audio on macOS 14.2+ |
+| M2.1.2 | Implement macOS CoreAudio HAL volume control in `crates/volume-control` | M1.3.1 | Can adjust process volume with fade in / fade out |
 | M2.1.3 | Permission guidance: detect Screen & System Audio Recording authorization on first launch | M2.1.1 | Provide clear guidance when unauthorized, automatically continue after authorization |
 | M2.1.4 | Field verification with Tencent Meeting / Feishu / Zoom / Teams macOS versions | M2.1.1, M2.1.2 | Produce compatibility report |
 
@@ -142,9 +144,9 @@ Complete macOS / Linux adapters for Core Service; ensure consistent unified API 
 
 | ID | Task | Dependencies | Acceptance Criteria |
 |----|------|--------------|---------------------|
-| M2.2.1 | Implement PipeWire capture by node | M1.2.2 | Verified on Ubuntu 22.04+ / Fedora |
-| M2.2.2 | Implement PulseAudio sink-input fallback | M2.2.1 | Automatically degrades when PipeWire is unavailable |
-| M2.2.3 | Implement PipeWire / PulseAudio volume control | M1.3.1 | Volume adjustment and fade in / fade out work normally |
+| M2.2.1 | Implement PipeWire capture by node in `crates/audio-capture` | M1.2.2 | Verified on Ubuntu 22.04+ / Fedora |
+| M2.2.2 | Implement PulseAudio sink-input fallback in `crates/audio-capture` | M2.2.1 | Automatically degrades when PipeWire is unavailable |
+| M2.2.3 | Implement PipeWire / PulseAudio volume control in `crates/volume-control` | M1.3.1 | Volume adjustment and fade in / fade out work normally |
 | M2.2.4 | Pure ALSA environment detection and friendly prompt | M2.2.2 | Detect on startup and prompt that it is unsupported |
 
 #### M2.3 API Consistency

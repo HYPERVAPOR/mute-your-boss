@@ -25,18 +25,26 @@
 │  ├─ Session Manager         │
 │  ├─ Policy Engine           │
 │  ├─ KWS Engine (CPU)        │
-│  └─ Event Log               │
-└──────┬───────────────┬──────┘
-       │               │
-┌──────▼───────┐ ┌─────▼────────┐
-│ Audio Capture│ │ Volume Ctrl  │   ← Platform adapter layer
+│  ├─ Event Log               │
+│  └─ Audio / Volume Traits   │
+└─────────────────────────────┘
+             │
+    ┌────────┴────────┐
+    ▼                 ▼
+┌──────────────┐ ┌──────────────┐
+│ audio-capture│ │volume-control│   ← Platform crates
 │ Win: WASAPI  │ │ Win: IAudio  │
 │ mac: SCK/Tap │ │ mac: HAL/Tap │
 │ Lin: PipeWire│ │ Lin: PW/PA   │
 └──────────────┘ └──────────────┘
 ```
 
-Layering principle: **Strict separation between the API layer and platform implementation layer** — the upper-layer interface is consistent across platforms, and platform differences are isolated behind the two adapter interfaces "Audio Capture" and "Volume Control". The GUI only calls the API and never touches platform logic directly.
+Layering principle:
+
+- **Core Service is platform-agnostic**: it only defines the `AudioCapture` and `VolumeController` traits and consumes them through dependency injection. It holds Session, Policy, KWS, and Event Log state.
+- **Platform adapters are independent crates**: `audio-capture` and `volume-control` implement the Core traits for Windows / macOS / Linux.
+- **API layer separation**: the upper-layer interface is consistent across platforms. The GUI only calls the API and never touches platform logic directly.
+- **Testability**: Core can be unit-tested with mock audio streams and mock volume handlers without starting a real meeting app.
 
 ## 2. Platform Adaptation Plan
 
@@ -162,7 +170,8 @@ The same proto definition applies to all three platforms; behavioral differences
 
 - GUI / CLI / SDK are all consumers of the unified API and do not directly touch platform audio logic.
 - API Gateway does not hold Session, KWS, audio capture, or other business state; it only forwards external requests to Core Service.
-- Core Service holds all state for Session Manager, Policy Engine, KWS Engine, Event Log, and platform adapters.
+- Core Service holds all state for Session Manager, Policy Engine, KWS Engine, and Event Log. It defines the `AudioCapture` and `VolumeController` traits but does not contain platform-specific implementations.
+- Platform-specific audio capture and volume control live in separate crates (`audio-capture` and `volume-control`) that implement the Core traits.
 
 **Notes**:
 
