@@ -1,5 +1,5 @@
 [package]
-name = "myb-core"
+name = "myb-server"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -7,15 +7,20 @@ authors.workspace = true
 repository.workspace = true
 
 [dependencies]
+myb-core = { path = "../myb-core" }
+myb-audio-capture = { path = "../myb-audio-capture" }
+myb-volume-control = { path = "../myb-volume-control" }
+myb-kws = { path = "../myb-kws" }
+myb-policy = { path = "../myb-policy" }
+myb-event-log = { path = "../myb-event-log" }
+
 tokio = { version = "1", features = ["full"] }
 tokio-stream = "0.1"
 tonic = "0.12"
 prost = "0.13"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-serde = { version = "1", features = ["derive"] }
-toml = "0.8"
 anyhow = "1"
 
 [build-dependencies]
-tonic-build = "0.12"
+myb-core = { path = "../myb-core" }

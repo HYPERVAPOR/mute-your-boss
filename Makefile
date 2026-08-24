@@ -1,4 +1,4 @@
-.PHONY: all build test fmt clean proto run-core run-gateway install-tools
+.PHONY: all build test fmt clean proto run-server run-gateway install-tools
 
 # Toolchain versions
 PROTOC_VERSION := 27.3
@@ -43,8 +43,8 @@ proto:
 		--go-grpc_opt=module=github.com/HYPERVAPOR/mute-your-boss/gateway \
 		proto/myb.proto
 
-run-core:
-	PROTOC=$(PROTOC) cargo run --release -p myb-core
+run-server:
+	PROTOC=$(PROTOC) cargo run --release -p myb-server
 
 run-gateway:
 	cd gateway && go run .

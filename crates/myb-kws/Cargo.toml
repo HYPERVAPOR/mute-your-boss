@@ -1,0 +1,15 @@
+[package]
+name = "myb-kws"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+myb-core = { path = "../myb-core" }
+anyhow = "1"
+tracing = "0.1"
+
+# To be added in M1.4.1:
+# sherpa-onnx = "*"

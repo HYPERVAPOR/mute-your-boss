@@ -27,11 +27,14 @@ Deliver Mute-your-boss in three phases using the technology stack defined in `TS
 |-----------|------------|
 | GUI | Tauri (Web frontend + Rust backend) |
 | API Gateway | Go (gRPC + HTTP/JSON) |
-| Core Service | Rust |
-| KWS | sherpa-onnx official Rust API |
-| Audio capture / volume control | Platform native APIs (WASAPI / CoreAudio Audio Process Tap / PipeWire) |
+| gRPC Server | `myb-server` (Rust) |
+| Session Orchestration | `myb-core` (Rust) |
+| Keyword Spotting | `myb-kws` + sherpa-onnx official Rust API |
+| Policy Engine | `myb-policy` (Rust) |
+| Event Log | `myb-event-log` (Rust) |
+| Audio Capture | `myb-audio-capture` + platform native APIs |
+| Volume Control | `myb-volume-control` + platform native APIs |
 | Configuration format | YAML |
-| Event log | JSONL / SQLite (decide in M2 based on verification) |
 | Inter-process communication | gRPC over localhost / Unix Domain Socket |
 
 ---
@@ -41,7 +44,7 @@ Deliver Mute-your-boss in three phases using the technology stack defined in `TS
 | Phase | Core Deliverable | Acceptance Criteria |
 |-------|------------------|---------------------|
 | M1 | Windows core runnable prototype | Tencent Meeting / Feishu end-to-end trigger ≤ 1s; volume restored after crash |
-| M2 | Cross-platform platform crates + Core Service + Go Gateway | Consistent API behavior across platforms; policy engine unit tests; macOS / Linux adapters complete |
+| M2 | Cross-platform platform crates + myb-core + Go Gateway | Consistent API behavior across platforms; policy engine unit tests; macOS / Linux adapters complete |
 | M3 | Tauri GUI + installers for all three platforms | US-1 ~ US-7 all accepted; 8-hour stability test passed |
 
 ---
@@ -58,67 +61,80 @@ Implement a minimum usable prototype on Windows: select a Tencent Meeting / Feis
 
 | ID | Task | Dependencies | Acceptance Criteria |
 |----|------|--------------|---------------------|
-| M1.1.1 | Initialize monorepo: create `/gateway` (Go), `/crates/core`, `/crates/audio-capture`, `/crates/volume-control`, `/proto` | None | All crates and gateway can be compiled independently; root `Makefile` provides `build`, `test`, `fmt` |
+| M1.1.1 | Initialize monorepo: create `/gateway` (Go), `/crates/myb-core`, `/crates/myb-audio-capture`, `/crates/myb-volume-control`, `/crates/myb-kws`, `/crates/myb-policy`, `/crates/myb-event-log`, `/crates/myb-server`, `/proto` | None | All crates and gateway can be compiled independently; root `Makefile` provides `build`, `test`, `fmt` |
 | M1.1.2 | Define proto file: `MuteYourBoss` service, Process / Session / Event messages | None | `buf generate` can produce Go and Rust code; CI checks proto changes |
-| M1.1.3 | Set up Rust Core Service project: `tokio` + `tonic` server, logging and config loading | M1.1.2 | `cargo run` starts and listens on localhost gRPC; can read YAML config |
-| M1.1.4 | Define `AudioCapture` and `VolumeController` traits in `crates/core` | M1.1.1 | Traits are platform-agnostic; include process enumeration and 16kHz / mono / f32 PCM audio stream abstraction |
-| M1.1.5 | Initialize `crates/audio-capture` and `crates/volume-control` stub crates | M1.1.1, M1.1.4 | Both compile and depend on core traits; provide mock implementations for unit tests |
+| M1.1.3 | Set up `myb-server`: `tokio` + `tonic` gRPC server, logging and config loading | M1.1.2 | `cargo run -p myb-server` starts and listens on localhost gRPC |
+| M1.1.4 | Define all traits in `myb-core`: `AudioCapture`, `VolumeController`, `KwsEngine`, `PolicyEngine`, `EventLog` | M1.1.1 | Traits are platform-agnostic; include mock-friendly abstractions |
+| M1.1.5 | Initialize stub crates `myb-audio-capture`, `myb-volume-control`, `myb-kws`, `myb-policy`, `myb-event-log` | M1.1.1, M1.1.4 | All compile and depend on `myb-core` traits; provide mock implementations for unit tests |
 
 #### M1.2 Audio Capture (Windows)
 
 | ID | Task | Dependencies | Acceptance Criteria |
 |----|------|--------------|---------------------|
 | M1.2.1 | Research WASAPI process loopback capture API in `windows-rs` | None | Produce a minimal compilable example; confirm Win10 / Win11 differences |
-| M1.2.2 | Implement `AudioCapture` trait for Windows in `crates/audio-capture` | M1.1.4, M1.2.1 | Can capture process audio by PID and output 16kHz / mono / f32 PCM |
-| M1.2.3 | Implement process enumeration in `crates/audio-capture` | M1.2.2 | Unit tests cover common process filtering logic |
+| M1.2.2 | Implement `AudioCapture` trait for Windows in `crates/myb-audio-capture` | M1.1.4, M1.2.1 | Can capture process audio by PID and output 16kHz / mono / f32 PCM |
+| M1.2.3 | Implement process enumeration in `crates/myb-audio-capture` | M1.2.2 | Unit tests cover common process filtering logic |
 | M1.2.4 | Field verification with Tencent Meeting and Feishu: confirm per-process capture feasibility | M1.2.2 | Produce compatibility report; if it fails, record fallback plan |
 
 #### M1.3 Volume Control (Windows)
 
 | ID | Task | Dependencies | Acceptance Criteria |
 |----|------|--------------|---------------------|
-| M1.3.1 | Implement `VolumeController` trait for Windows in `crates/volume-control` | M1.1.4 | Can set volume 0–100 by PID; supports ~200ms fade in / fade out |
-| M1.3.2 | Implement volume restore guardian in Core | M1.3.1 | Target process volume is restored after manually killing the process |
-| M1.3.3 | Handle user manually changing volume: detect external changes and pause automatic control | M1.3.1 | State becomes paused after manual change; user decides whether to resume control |
+| M1.3.1 | Implement `VolumeController` trait for Windows in `crates/myb-volume-control` | M1.1.4 | Can set volume 0–100 by PID; supports ~200ms fade in / fade out |
 
-#### M1.4 KWS Integration
+#### M1.4 KWS Integration (myb-kws)
 
 | ID | Task | Dependencies | Acceptance Criteria |
 |----|------|--------------|---------------------|
-| M1.4.1 | Integrate sherpa-onnx Rust crate; load KWS model and self-check | None | `cargo build` passes; readable error if model is missing on startup |
-| M1.4.2 | Implement keyword vocabulary construction: extract keywords from YAML policies and generate sherpa-onnx vocabulary | M1.4.1 | Supports Chinese (pinyin with tones) + English mixed configuration |
-| M1.4.3 | Implement streaming KWS in Core: consume any `AudioCapture` stream, output `{keyword, confidence, timestamp}` | M1.4.2, M1.1.4 | Can stably detect keywords from a mock audio stream in unit tests |
+| M1.4.1 | Integrate sherpa-onnx Rust crate in `myb-kws`; load KWS model and self-check | None | `cargo build` passes; readable error if model is missing on startup |
+| M1.4.2 | Implement keyword vocabulary construction in `myb-kws`: extract keywords from YAML policies and generate sherpa-onnx vocabulary | M1.4.1 | Supports Chinese (pinyin with tones) + English mixed configuration |
+| M1.4.3 | Implement `KwsEngine` trait in `myb-kws`: consume any `AudioCapture` stream, output `{keyword, confidence, timestamp}` | M1.4.2, M1.1.4 | Can stably detect keywords from a mock audio stream in unit tests |
 | M1.4.4 | Keyword latency and detection rate test: quiet environment Mandarin, ≥ 95% detection, ≤ 1s latency | M1.4.3, M1.2.2 | Produce test report; record threshold tuning recommendations |
 
-#### M1.5 Policy Engine
+#### M1.5 Policy Engine (myb-policy)
 
 | ID | Task | Dependencies | Acceptance Criteria |
 |----|------|--------------|---------------------|
-| M1.5.1 | Implement YAML policy parsing and validation | M1.1.3 | Invalid policies return clear errors; covered by unit tests |
-| M1.5.2 | Implement policy matching: list-order matching, threshold judgment, action execution | M1.5.1, M1.4.3 | After keyword hit, trigger corresponding volume and duration |
-| M1.5.3 | Implement debounce and renewal: repeated hits within the same policy debounce window refresh duration | M1.5.2 | Unit tests cover multiple hits within a 5s window |
-| M1.5.4 | Implement fail-safe: restore target process volume when detection anomaly occurs | M1.3.2 | Simulate KWS crash / policy parsing failure, volume is restored |
+| M1.5.1 | Implement YAML policy parsing and validation in `myb-policy` | M1.1.4 | Invalid policies return clear errors; covered by unit tests |
+| M1.5.2 | Implement `PolicyEngine` trait in `myb-policy`: list-order matching, threshold judgment, action execution | M1.5.1 | After keyword hit, return correct `VolumeDecision` |
+| M1.5.3 | Implement debounce and renewal in `myb-policy`: repeated hits within the same policy debounce window refresh duration | M1.5.2 | Unit tests cover multiple hits within a 5s window |
 
-#### M1.6 API Gateway (Go)
-
-| ID | Task | Dependencies | Acceptance Criteria |
-|----|------|--------------|---------------------|
-| M1.6.1 | Initialize Go gateway: `gin/echo` HTTP + `grpc-go` client, listen only on 127.0.0.1 | M1.1.2 | `go run` starts; generates random token for authentication |
-| M1.6.2 | Implement forwarding layer: HTTP/JSON ↔ gRPC ↔ Core Service | M1.6.1, M1.1.3 | All interfaces reachable via Postman / curl |
-| M1.6.3 | Implement SSE / Websocket bridge for `GetEventStream` (easy frontend debugging) | M1.6.2 | Frontend can receive event stream |
-
-#### M1.7 CLI (Rust or Go)
+#### M1.6 Event Log (myb-event-log)
 
 | ID | Task | Dependencies | Acceptance Criteria |
 |----|------|--------------|---------------------|
-| M1.7.1 | Implement minimal CLI: list / start / stop / status | M1.6.2 | Command line can fully operate one focus session |
+| M1.6.1 | Implement `EventLog` trait in `myb-event-log` | M1.1.4 | Append / recent / clear operations work; persists to JSONL or SQLite |
+| M1.6.2 | Add query API and one-click clear endpoint | M1.6.1 | gRPC `GetEventStream` / status can read from event log |
+
+#### M1.7 Core Orchestration (myb-core)
+
+| ID | Task | Dependencies | Acceptance Criteria |
+|----|------|--------------|---------------------|
+| M1.7.1 | Implement `FocusSession`: wire `AudioCapture` → `KwsEngine` → `PolicyEngine` → `VolumeController` + `EventLog` | M1.1.4, M1.4.3, M1.5.2, M1.6.1 | A keyword hit from a mock stream changes the mock volume |
+| M1.7.2 | Implement volume restore guardian in `myb-core` | M1.3.1, M1.7.1 | Target process volume is restored after manually killing the server |
+| M1.7.3 | Implement fail-safe: restore volume on KWS / policy / audio capture anomaly | M1.7.2 | Simulate any subsystem crash, volume returns to safe level |
+| M1.7.4 | Handle user manually changing volume: detect external changes and pause automatic control | M1.3.1 | State becomes paused after manual change; user decides whether to resume control |
+
+#### M1.8 API Gateway (Go)
+
+| ID | Task | Dependencies | Acceptance Criteria |
+|----|------|--------------|---------------------|
+| M1.8.1 | Initialize Go gateway: `gin/echo` HTTP + `grpc-go` client, listen only on 127.0.0.1 | M1.1.2 | `go run` starts; generates random token for authentication |
+| M1.8.2 | Implement forwarding layer: HTTP/JSON ↔ gRPC ↔ myb-server | M1.8.1, M1.1.3 | All interfaces reachable via Postman / curl |
+| M1.8.3 | Implement SSE / Websocket bridge for `GetEventStream` (easy frontend debugging) | M1.8.2 | Frontend can receive event stream |
+
+#### M1.9 CLI (Rust or Go)
+
+| ID | Task | Dependencies | Acceptance Criteria |
+|----|------|--------------|---------------------|
+| M1.9.1 | Implement minimal CLI: list / start / stop / status | M1.8.2 | Command line can fully operate one focus session |
 
 ### 3.3 M1 Acceptance Criteria
 
 - [ ] Per-process audio capture succeeds on Tencent Meeting or Feishu on Windows.
 - [ ] After speaking the configured keyword, the target process volume is restored within ≤ 1s.
 - [ ] If no further hit occurs within the duration, volume automatically returns to 0 or original volume (per policy).
-- [ ] Manually killing Core Service automatically restores the target process volume.
+- [ ] Manually killing myb-server automatically restores the target process volume.
 - [ ] CLI can complete one full session operation.
 
 ---
@@ -127,7 +143,7 @@ Implement a minimum usable prototype on Windows: select a Tencent Meeting / Feis
 
 ### 4.1 Goal
 
-Complete macOS / Linux adapters in `crates/audio-capture` and `crates/volume-control`; ensure consistent unified API behavior across all three platforms; policy engine covered by unit tests; provide installation / startup scripts.
+Complete macOS / Linux adapters in `crates/myb-audio-capture` and `crates/myb-volume-control`; ensure consistent unified API behavior across all three platforms; policy engine covered by unit tests; provide installation / startup scripts.
 
 ### 4.2 Task List
 
@@ -135,8 +151,8 @@ Complete macOS / Linux adapters in `crates/audio-capture` and `crates/volume-con
 
 | ID | Task | Dependencies | Acceptance Criteria |
 |----|------|--------------|---------------------|
-| M2.1.1 | Implement macOS Audio Process Tap audio capture in `crates/audio-capture` | M1.2.2 | Can capture target process audio on macOS 14.2+ |
-| M2.1.2 | Implement macOS CoreAudio HAL volume control in `crates/volume-control` | M1.3.1 | Can adjust process volume with fade in / fade out |
+| M2.1.1 | Implement macOS Audio Process Tap audio capture in `crates/myb-audio-capture` | M1.2.2 | Can capture target process audio on macOS 14.2+ |
+| M2.1.2 | Implement macOS CoreAudio HAL volume control in `crates/myb-volume-control` | M1.3.1 | Can adjust process volume with fade in / fade out |
 | M2.1.3 | Permission guidance: detect Screen & System Audio Recording authorization on first launch | M2.1.1 | Provide clear guidance when unauthorized, automatically continue after authorization |
 | M2.1.4 | Field verification with Tencent Meeting / Feishu / Zoom / Teams macOS versions | M2.1.1, M2.1.2 | Produce compatibility report |
 
@@ -144,18 +160,18 @@ Complete macOS / Linux adapters in `crates/audio-capture` and `crates/volume-con
 
 | ID | Task | Dependencies | Acceptance Criteria |
 |----|------|--------------|---------------------|
-| M2.2.1 | Implement PipeWire capture by node in `crates/audio-capture` | M1.2.2 | Verified on Ubuntu 22.04+ / Fedora |
-| M2.2.2 | Implement PulseAudio sink-input fallback in `crates/audio-capture` | M2.2.1 | Automatically degrades when PipeWire is unavailable |
-| M2.2.3 | Implement PipeWire / PulseAudio volume control in `crates/volume-control` | M1.3.1 | Volume adjustment and fade in / fade out work normally |
+| M2.2.1 | Implement PipeWire capture by node in `crates/myb-audio-capture` | M1.2.2 | Verified on Ubuntu 22.04+ / Fedora |
+| M2.2.2 | Implement PulseAudio sink-input fallback in `crates/myb-audio-capture` | M2.2.1 | Automatically degrades when PipeWire is unavailable |
+| M2.2.3 | Implement PipeWire / PulseAudio volume control in `crates/myb-volume-control` | M1.3.1 | Volume adjustment and fade in / fade out work normally |
 | M2.2.4 | Pure ALSA environment detection and friendly prompt | M2.2.2 | Detect on startup and prompt that it is unsupported |
 
 #### M2.3 API Consistency
 
 | ID | Task | Dependencies | Acceptance Criteria |
 |----|------|--------------|---------------------|
-| M2.3.1 | Write cross-platform API consistency test suite | M1.6.2 | Covers list / start / stop / set_volume / event_stream / status |
+| M2.3.1 | Write cross-platform API consistency test suite | M1.8.2 | Covers list / start / stop / set_volume / event_stream / status |
 | M2.3.2 | Run Windows / macOS / Linux consistency tests in CI | M2.3.1, M2.1.4, M2.2.4 | Tests pass on all three platforms |
-| M2.3.3 | Improve error codes and messages: missing permissions, process exit, missing model, etc. | M1.6.2 | Each error scenario returns a clear, readable error |
+| M2.3.3 | Improve error codes and messages: missing permissions, process exit, missing model, etc. | M1.8.2 | Each error scenario returns a clear, readable error |
 
 #### M2.4 Policy Engine Refinement
 
@@ -163,7 +179,7 @@ Complete macOS / Linux adapters in `crates/audio-capture` and `crates/volume-con
 |----|------|--------------|---------------------|
 | M2.4.1 | Unit tests cover policy matching, priority, debounce, renewal, timeout | M1.5.3 | Coverage ≥ 80% |
 | M2.4.2 | Implement Chinese automatic pinyin conversion, support manual pinyin / phoneme fine-tuning | M1.5.1 | Unit tests cover common names and module names |
-| M2.4.3 | Event log persistence: JSONL or SQLite, support query and clear | M1.5.2 | API can query the latest N events; one-click clear available |
+| M2.4.3 | Event log persistence tuning: JSONL vs SQLite, rotation, retention | M1.6.1 | Query / clear / retention policies work under load |
 | M2.4.4 | Hot policy update: modify policy at runtime without restarting session | M1.5.2 | Changes to YAML take effect automatically or clearly prompt a restart |
 
 #### M2.5 SDK and CLI
@@ -172,7 +188,7 @@ Complete macOS / Linux adapters in `crates/audio-capture` and `crates/volume-con
 |----|------|--------------|---------------------|
 | M2.5.1 | Publish Rust SDK crate (local path dependency) | M2.3.2 | SDK example runs |
 | M2.5.2 | CLI supports policy editing and import / export | M2.4.1 | `myb policy add/edit/export/import` available |
-| M2.5.3 | Provide startup script: one-click start gateway + core | M1.6.2 | Windows `.bat` / macOS Linux `.sh` |
+| M2.5.3 | Provide startup script: one-click start gateway + myb-server | M1.8.2 | Windows `.bat` / macOS Linux `.sh` |
 
 ### 4.3 M2 Acceptance Criteria
 
@@ -260,7 +276,7 @@ Implement the Tauri GUI based on the unified API, complete US-1 ~ US-7 from the 
 | Level | Tools | Coverage |
 |-------|-------|----------|
 | Unit tests | Rust `cargo test` / Go `go test` | Policy engine, config parsing, utility functions |
-| Integration tests | Rust / Go integration tests | Core Service and Gateway end-to-end |
+| Integration tests | Rust / Go integration tests | myb-server and Gateway end-to-end |
 | Platform adapter tests | Manual + automated scripts | Audio capture, volume control, run on real machines / CI for all three platforms |
 | KWS test set | Pre-recorded audio + live testing | Quiet / noisy × Mandarin / accent, record detection rate and false trigger rate |
 | Stability tests | Long-running scripts | 8 hours continuous operation, monitor memory and volume restore |
@@ -284,8 +300,8 @@ Implement the Tauri GUI based on the unified API, complete US-1 ~ US-7 from the 
 
 1. Review and confirm this Dev Plan.
 2. Create GitHub / GitLab repository and basic CI configuration.
-3. Initialize monorepo: (`/gateway`, `/core`, `/proto`, `/gui`).
-4. Start M1.1.1 ~ M1.1.3 engineering skeleton.
+3. Initialize monorepo: (`/gateway`, `/crates/*`, `/proto`).
+4. Start M1.1.1 ~ M1.1.5 engineering skeleton.
 
 ---
 

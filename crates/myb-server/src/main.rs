@@ -10,10 +10,10 @@ use myb_core::pb::{
 type GetEventStreamStream = ReceiverStream<Result<Event, tonic::Status>>;
 
 #[derive(Debug, Default)]
-pub struct MybCoreService;
+pub struct MybServerService;
 
 #[tonic::async_trait]
-impl MuteYourBoss for MybCoreService {
+impl MuteYourBoss for MybServerService {
     type GetEventStreamStream = GetEventStreamStream;
 
     async fn list_audio_processes(
@@ -96,9 +96,9 @@ async fn main() -> anyhow::Result<()> {
         .init();
 
     let addr: SocketAddr = "127.0.0.1:50051".parse()?;
-    let service = MybCoreService::default();
+    let service = MybServerService::default();
 
-    tracing::info!("myb-core listening on {}", addr);
+    tracing::info!("myb-server listening on {}", addr);
 
     Server::builder()
         .add_service(MuteYourBossServer::new(service))

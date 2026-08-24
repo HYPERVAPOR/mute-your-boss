@@ -1,0 +1,12 @@
+[package]
+name = "myb-policy"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+myb-core = { path = "../myb-core" }
+anyhow = "1"
+serde = { version = "1", features = ["derive"] }

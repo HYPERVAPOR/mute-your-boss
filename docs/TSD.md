@@ -21,30 +21,39 @@
 └────────────┬────────────────┘
              │
 ┌────────────▼────────────────┐
-│  Core Service (Rust)        │
+│      myb-server             │  ← gRPC server, assembles all crates
+└────────────┬────────────────┘
+             │
+┌────────────▼────────────────┐
+│      myb-core               │  ← FocusSession orchestration
 │  ├─ Session Manager         │
-│  ├─ Policy Engine           │
-│  ├─ KWS Engine (CPU)        │
-│  ├─ Event Log               │
-│  └─ Audio / Volume Traits   │
+│  ├─ Audio / Volume / KWS /  │
+│  │  Policy / EventLog traits │
+│  └─ Fail-safe / Watchdog    │
 └─────────────────────────────┘
              │
-    ┌────────┴────────┐
-    ▼                 ▼
-┌──────────────┐ ┌──────────────┐
-│ audio-capture│ │volume-control│   ← Platform crates
-│ Win: WASAPI  │ │ Win: IAudio  │
-│ mac: SCK/Tap │ │ mac: HAL/Tap │
-│ Lin: PipeWire│ │ Lin: PW/PA   │
-└──────────────┘ └──────────────┘
+    ┌────────┴────────┬────────────────┬────────────────┐
+    ▼                 ▼                ▼                ▼
+┌──────────┐  ┌──────────────┐  ┌──────────┐  ┌─────────────┐
+│myb-audio-│  │myb-volume-   │  │myb-kws   │  │myb-policy   │
+│capture   │  │control       │  │          │  │             │
+│Win:WASAPI│  │Win:IAudio    │  │sherpa-   │  │YAML / match │
+│mac:SCK/  │  │mac:HAL/Tap   │  │onnx      │  │/ action     │
+│Lin:PW    │  │Lin:PW/PA     │  │          │  │             │
+└──────────┘  └──────────────┘  └──────────┘  └─────────────┘
+                               ┌─────────────┐
+                               │myb-event-log│
+                               │JSONL/SQLite │
+                               └─────────────┘
 ```
 
 Layering principle:
 
-- **Core Service is platform-agnostic**: it only defines the `AudioCapture` and `VolumeController` traits and consumes them through dependency injection. It holds Session, Policy, KWS, and Event Log state.
-- **Platform adapters are independent crates**: `audio-capture` and `volume-control` implement the Core traits for Windows / macOS / Linux.
+- **myb-server** is the only gRPC server binary. It assembles `myb-core`, `myb-audio-capture`, `myb-volume-control`, `myb-kws`, `myb-policy`, and `myb-event-log` and exposes the unified API.
+- **myb-core is platform-agnostic**: it defines all traits (`AudioCapture`, `VolumeController`, `KwsEngine`, `PolicyEngine`, `EventLog`) and orchestrates a `FocusSession` through dependency injection. It holds session state, fail-safe logic, and the watchdog.
+- **Specialized crates implement Core traits**: `myb-kws` handles sherpa-onnx keyword spotting; `myb-policy` handles YAML policy matching; `myb-event-log` handles persistence; `myb-audio-capture` / `myb-volume-control` handle platform-specific audio capture and volume control.
 - **API layer separation**: the upper-layer interface is consistent across platforms. The GUI only calls the API and never touches platform logic directly.
-- **Testability**: Core can be unit-tested with mock audio streams and mock volume handlers without starting a real meeting app.
+- **Testability**: `myb-core` can be unit-tested with mock implementations of every trait, without starting a real meeting app.
 
 ## 2. Platform Adaptation Plan
 
@@ -83,7 +92,7 @@ Use **sherpa-onnx Keyword Spotting** (zipformer / transducer family streaming mo
 - **Native streaming**: frame-by-frame detection scores with sub-second latency.
 - **Pure CPU real-time operation**: model size is tens of MB, low single-core usage, no GPU dependency.
 - Existing Chinese-optimized models (wenetspeech, etc.) support Chinese-English mixed configuration.
-- Official SDKs are available in Rust / Go / C / C++ / Python; Core Service uses the official Rust API, no need for a custom FFI.
+- Official SDKs are available in Rust / Go / C / C++ / Python; `myb-kws` uses the official Rust API, no need for a custom FFI.
 
 ### 3.2 Pipeline Spec
 
@@ -138,7 +147,7 @@ policies:
 ### 5.1 Form
 
 - Local gRPC (HTTP/2, good stream support) as primary, with HTTP/JSON gateway exposed for debugging; only listens on `127.0.0.1`, generates a local token for authentication on startup.
-- API Gateway is implemented in Go, responsible for authentication, routing, protocol conversion, and rate limiting; Core Service is implemented in Rust, holding all business state.
+- API Gateway is implemented in Go, responsible for authentication, routing, protocol conversion, and rate limiting; `myb-server` is implemented in Rust and exposes the unified gRPC API, delegating all business logic to `myb-core`.
 - SDK: first version prioritizes Rust SDK (used by CLI and Tauri GUI), interfaces defined by proto; other language SDKs generated as needed.
 
 ### 5.2 Interface Definition (Illustrative)
@@ -162,16 +171,24 @@ The same proto definition applies to all three platforms; behavioral differences
 | Component | Selection | Rationale |
 |-----------|-----------|-----------|
 | API Gateway | Go | Mature gRPC/HTTP service, strong concurrency, simple deployment; only authentication and protocol conversion |
-| Core Service | Rust | No GC, suitable for real-time audio; official sherpa-onnx Rust SDK available; mature ecosystem for low-level audio / volume API bindings |
+| myb-server | Rust | gRPC server binary; assembles all Rust crates and exposes the unified API |
+| myb-core | Rust | Platform-agnostic session orchestration; defines all traits consumed via dependency injection |
+| myb-kws | Rust | sherpa-onnx keyword spotting; implements the `KwsEngine` trait |
+| myb-policy | Rust | YAML policy parsing and matching; implements the `PolicyEngine` trait |
+| myb-event-log | Rust | Local event persistence; implements the `EventLog` trait |
+| myb-audio-capture | Rust | Platform-specific audio capture; implements the `AudioCapture` trait |
+| myb-volume-control | Rust | Platform-specific volume control; implements the `VolumeController` trait |
 | GUI | Tauri | Small package size, low memory usage; frontend uses Web tech stack, native capabilities provided by Rust backend |
-| KWS | sherpa-onnx Rust API | Official Rust SDK, no custom FFI; streaming, pure CPU |
+| KWS model | sherpa-onnx | Official Rust SDK, no custom FFI; streaming, pure CPU |
 
 **Layering principles**:
 
 - GUI / CLI / SDK are all consumers of the unified API and do not directly touch platform audio logic.
-- API Gateway does not hold Session, KWS, audio capture, or other business state; it only forwards external requests to Core Service.
-- Core Service holds all state for Session Manager, Policy Engine, KWS Engine, and Event Log. It defines the `AudioCapture` and `VolumeController` traits but does not contain platform-specific implementations.
-- Platform-specific audio capture and volume control live in separate crates (`audio-capture` and `volume-control`) that implement the Core traits.
+- API Gateway does not hold Session, KWS, audio capture, or other business state; it only forwards external requests to `myb-server`.
+- `myb-server` is the only gRPC server binary. It wires together `myb-core` and all trait-implementing crates.
+- `myb-core` is platform-agnostic. It defines `AudioCapture`, `VolumeController`, `KwsEngine`, `PolicyEngine`, and `EventLog` traits and orchestrates a `FocusSession`. It does not depend on any platform-specific crate.
+- Each specialized crate (`myb-kws`, `myb-policy`, `myb-event-log`, `myb-audio-capture`, `myb-volume-control`) depends on `myb-core` and implements one or more traits.
+- This structure makes every component independently testable with mock trait implementations.
 
 **Notes**:
 

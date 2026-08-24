@@ -1,5 +1,5 @@
 [package]
-name = "myb-volume-control"
+name = "myb-audio-capture"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -7,7 +7,7 @@ authors.workspace = true
 repository.workspace = true
 
 [dependencies]
-myb-core = { path = "../core" }
+myb-core = { path = "../myb-core" }
 anyhow = "1"
 
 [target.'cfg(windows)'.dependencies]
