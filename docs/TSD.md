@@ -12,40 +12,46 @@
 ## 1. Overall Architecture
 
 ```
-┌─────────────────────────────┐
-│       GUI / CLI / SDK       │
-└────────────┬────────────────┘
-             │ Unified API (gRPC/HTTP, localhost)
-┌────────────▼────────────────┐
-│  API Gateway (Go)           │
-└────────────┬────────────────┘
-             │
-┌────────────▼────────────────┐
-│      myb-server             │  ← gRPC server, assembles all crates
-└────────────┬────────────────┘
-             │
-┌────────────▼────────────────┐
-│      myb-core               │  ← FocusSession orchestration
-│  ├─ Session Manager         │
-│  ├─ Audio / Volume / KWS /  │
-│  │  Policy / EventLog traits │
-│  └─ Fail-safe / Watchdog    │
-└─────────────────────────────┘
-             │
-    ┌────────┴────────┬────────────────┬────────────────┐
-    ▼                 ▼                ▼                ▼
-┌──────────┐  ┌──────────────┐  ┌──────────┐  ┌─────────────┐
-│myb-audio-│  │myb-volume-   │  │myb-kws   │  │myb-policy   │
-│capture   │  │control       │  │          │  │             │
-│Win:WASAPI│  │Win:IAudio    │  │sherpa-   │  │YAML / match │
-│mac:SCK/  │  │mac:HAL/Tap   │  │onnx      │  │/ action     │
-│Lin:PW    │  │Lin:PW/PA     │  │          │  │             │
-└──────────┘  └──────────────┘  └──────────┘  └─────────────┘
-                               ┌─────────────┐
-                               │myb-event-log│
-                               │JSONL/SQLite │
-                               └─────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                     GUI / CLI / SDK                         │
+└───────────────────────────┬─────────────────────────────────┘
+                            │ Unified API (gRPC/HTTP, localhost)
+┌───────────────────────────▼─────────────────────────────────┐
+│                    API Gateway (Go)                         │
+└───────────────────────────┬─────────────────────────────────┘
+                            │ forwards
+┌───────────────────────────▼─────────────────────────────────┐
+│                     myb-server (Rust)                       │
+│              assembles concrete implementations             │
+└─────┬─────┬─────┬─────┬─────┬───────────────────────────────┘
+      │     │     │     │     │ injects / depends on
+      ▼     ▼     ▼     ▼     ▼
+┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐
+│myb-    │ │myb-    │ │myb-    │ │myb-    │ │myb-    │
+│audio   │ │volume  │ │kws     │ │policy  │ │event   │
+│capture │ │control │ │        │ │        │ │log     │
+│(impl   │ │(impl   │ │(impl   │ │(impl   │ │(impl   │
+│Audio-  │ │Volume- │ │Kws-    │ │Policy- │ │Event-  │
+│Capture)│ │Controller)│    Engine)│    Engine)│    Log) │
+└────┬───┘ └────┬───┘ └────┬───┘ └────┬───┘ └────┬───┘
+     │          │          │          │          │
+     └──────────┴──────────┴────┬─────┴──────────┘
+                                │ implements
+                                ▼
+                         ┌─────────────┐
+                         │  myb-core   │  ← platform-agnostic core
+                         │             │
+                         │ defines:    │
+                         │  AudioCapture
+                         │  VolumeController
+                         │  KwsEngine  │
+                         │  PolicyEngine
+                         │  EventLog   │
+                         │  FocusSession
+                         └─────────────┘
 ```
+
+Arrow direction: **A ──► B** means **A depends on B** (A imports and uses B).
 
 Layering principle:
 
