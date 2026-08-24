@@ -1,0 +1,14 @@
+[package]
+name = "myb-volume-control"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+myb-core = { path = "../core" }
+anyhow = "1"
+
+[target.'cfg(windows)'.dependencies]
+# windows = { version = "0.58", features = ["Win32_Media_Audio", ...] }

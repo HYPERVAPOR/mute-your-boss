@@ -1,26 +1,25 @@
 use std::net::SocketAddr;
 use tokio_stream::wrappers::ReceiverStream;
-use tonic::{transport::Server, Request, Response, Status};
+use tonic::{transport::Server, Request, Response};
 
-pub mod pb {
-    tonic::include_proto!("myb.v1");
-}
+use myb_core::pb::{
+    mute_your_boss_server::{MuteYourBoss, MuteYourBossServer},
+    *,
+};
 
-use pb::mute_your_boss_server::{MuteYourBoss, MuteYourBossServer};
-use pb::*;
+type GetEventStreamStream = ReceiverStream<Result<Event, tonic::Status>>;
 
 #[derive(Debug, Default)]
 pub struct MybCoreService;
 
-type GetEventStreamStream = ReceiverStream<Result<Event, tonic::Status>>;
-
 #[tonic::async_trait]
 impl MuteYourBoss for MybCoreService {
     type GetEventStreamStream = GetEventStreamStream;
+
     async fn list_audio_processes(
         &self,
         _request: Request<Empty>,
-    ) -> Result<Response<ProcessList>, Status> {
+    ) -> Result<Response<ProcessList>, tonic::Status> {
         Ok(Response::new(ProcessList {
             processes: vec![AudioProcess {
                 pid: 0,
@@ -35,7 +34,7 @@ impl MuteYourBoss for MybCoreService {
     async fn start_session(
         &self,
         request: Request<StartSessionReq>,
-    ) -> Result<Response<Session>, Status> {
+    ) -> Result<Response<Session>, tonic::Status> {
         let req = request.into_inner();
         Ok(Response::new(Session {
             session_id: "session-001".to_string(),
@@ -44,11 +43,17 @@ impl MuteYourBoss for MybCoreService {
         }))
     }
 
-    async fn stop_session(&self, _request: Request<SessionRef>) -> Result<Response<Empty>, Status> {
+    async fn stop_session(
+        &self,
+        _request: Request<SessionRef>,
+    ) -> Result<Response<Empty>, tonic::Status> {
         Ok(Response::new(Empty {}))
     }
 
-    async fn set_volume(&self, _request: Request<SetVolumeReq>) -> Result<Response<Empty>, Status> {
+    async fn set_volume(
+        &self,
+        _request: Request<SetVolumeReq>,
+    ) -> Result<Response<Empty>, tonic::Status> {
         Ok(Response::new(Empty {}))
     }
 
@@ -76,7 +81,7 @@ impl MuteYourBoss for MybCoreService {
     async fn validate_policy(
         &self,
         _request: Request<PolicyYaml>,
-    ) -> Result<Response<ValidationResult>, Status> {
+    ) -> Result<Response<ValidationResult>, tonic::Status> {
         Ok(Response::new(ValidationResult {
             ok: true,
             error: "".to_string(),
