@@ -38,6 +38,9 @@ jobs:
       - name: Check formatting
         run: cargo fmt --all -- --check
 
+      - name: Check compilation
+        run: cargo check --release --all-targets
+
       - name: Run clippy
         run: cargo clippy --release --all-targets -- -D warnings
 
