@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+  PROTOC: ${{ github.workspace }}/tools/protoc/bin/protoc
+
+jobs:
+  rust:
+    name: Rust lint and test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install protoc
+        run: |
+          mkdir -p tools
+          curl -L -o tools/protoc.zip \
+            https://github.com/protocolbuffers/protobuf/releases/download/v27.3/protoc-27.3-linux-x86_64.zip
+          unzip -o tools/protoc.zip -d tools/protoc
+          rm tools/protoc.zip
+          echo "${{ github.workspace }}/tools/protoc/bin" >> "$GITHUB_PATH"
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Run clippy
+        run: cargo clippy --release --all-targets -- -D warnings
+
+      - name: Run tests
+        run: cargo test --release
+
+  go:
+    name: Go lint and test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: gateway
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Build
+        run: go build -v ./...
+
+      - name: Test
+        run: go test -v ./...
