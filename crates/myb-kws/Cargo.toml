@@ -11,3 +11,8 @@ myb-core = { path = "../myb-core" }
 anyhow = "1"
 tracing = "0.1"
 sherpa-onnx = "1.13.6"
+
+[dev-dependencies]
+symphonia = { version = "0.5", features = ["mp3", "flac", "wav", "ogg", "pcm"] }
+rubato = "0.14"
+hound = "3.5"
