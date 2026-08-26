@@ -21,12 +21,7 @@ fn decode_audio(path: &str) -> anyhow::Result<(Vec<f32>, u32, usize)> {
     let meta_opts: MetadataOptions = Default::default();
     let fmt_opts: FormatOptions = Default::default();
 
-    let probed = symphonia::default::get_probe().format(
-        &hint,
-        mss,
-        &fmt_opts,
-        &meta_opts,
-    )?;
+    let probed = symphonia::default::get_probe().format(&hint, mss, &fmt_opts, &meta_opts)?;
     let mut format = probed.format;
 
     let track = format
@@ -39,11 +34,7 @@ fn decode_audio(path: &str) -> anyhow::Result<(Vec<f32>, u32, usize)> {
         .codec_params
         .sample_rate
         .ok_or_else(|| anyhow::anyhow!("unknown sample rate"))?;
-    let n_channels = track
-        .codec_params
-        .channels
-        .map(|c| c.count())
-        .unwrap_or(1);
+    let n_channels = track.codec_params.channels.map(|c| c.count()).unwrap_or(1);
 
     let dec_opts: DecoderOptions = Default::default();
     let mut decoder = symphonia::default::get_codecs().make(&track.codec_params, &dec_opts)?;
@@ -54,7 +45,11 @@ fn decode_audio(path: &str) -> anyhow::Result<(Vec<f32>, u32, usize)> {
     loop {
         let packet = match format.next_packet() {
             Ok(packet) => packet,
-            Err(SymphoniaError::IoError(err)) if err.kind() == std::io::ErrorKind::UnexpectedEof => break,
+            Err(SymphoniaError::IoError(err))
+                if err.kind() == std::io::ErrorKind::UnexpectedEof =>
+            {
+                break
+            }
             Err(err) => return Err(err.into()),
         };
 
