@@ -869,6 +869,8 @@ dependencies = [
  "myb-policy",
  "myb-volume-control",
  "prost",
+ "rubato",
+ "symphonia",
  "tokio",
  "tokio-stream",
  "tonic",

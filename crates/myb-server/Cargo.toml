@@ -22,5 +22,9 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 anyhow = "1"
 
+[dev-dependencies]
+symphonia = { version = "0.5", features = ["mp3", "flac", "wav", "ogg", "pcm"] }
+rubato = "0.14"
+
 [build-dependencies]
 myb-core = { path = "../myb-core" }
